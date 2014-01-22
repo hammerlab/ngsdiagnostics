@@ -9,6 +9,7 @@
 import re
 import sys
 import numpy
+import report_metadata
 from collections import defaultdict
 
 # Each line in the log file is scanned for one of these strings -- these define the "steps" 
@@ -149,9 +150,11 @@ def parse_file(filename):
 # Pass the filenames of the logfiles you want to parse in on the command line.
 def main(args):
 	#samples = load_sample_keys()
+        db_fn = args[-1]
 	try: 
 		sampleCount = 0
-		for arg in args:
+		for arg in args[:-1]:
+                        run_id = report_metadata.report_metadata_to_db(arg, db_fn)
 			t = parse_file(arg)	
 			#sample = samples[arg]
 			sample = "Test"
