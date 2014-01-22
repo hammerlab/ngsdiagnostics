@@ -3,6 +3,9 @@
 #
 # Copyright (c) 2013. Genome Bridge LLC
 # 
+# Add per sample output (sample name, size of data, read counts)
+# define schema (sample, sample stats, ...) in SQLite3 for tracking
+
 import re
 import sys
 import numpy
@@ -100,7 +103,7 @@ def parse_file(filename):
 				body = m.group(6)
 				step = find_steps(body)
 				logtime = LogTime(hours, mins, secs, prev_logtime)
-				print logtime
+#				print logtime
 				logtimes.append(logtime)
 				if step:  # if step is truthy, then this is a FunctionEdge of one of the pre-identified steps, above.
 					#print '%02d:%02d:%02d %d %s %s' % ( hours, mins, secs, logtime.timestamp, edgeType, step)
@@ -163,4 +166,3 @@ def main(args):
 
 if __name__=='__main__': 
 	main(sys.argv[1:])
-
