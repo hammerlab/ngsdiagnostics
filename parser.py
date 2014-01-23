@@ -7,6 +7,7 @@
 # define schema (sample, sample stats, ...) in SQLite3 for tracking
 
 import re
+import sqlite3
 import sys
 import numpy
 import report_metadata
@@ -147,6 +148,20 @@ def parse_file(filename):
 				print '%.1f\t%.1f%%\t%s' % (total_times[step], 100.0 * frac, step)
 	return total_times
 
+def insert_run_phase_time(db, run_id, key, timing):
+        c = db.cursor()
+        key = key.lower()
+        cursor = c.execute('select id from perf_steps where name=?', (key,))
+        step_id_cursor = cursor.fetchone()
+        if not step_id_cursor:
+                c.execute("insert into perf_steps (name) values (?)", (key,))
+                cursor = c.execute("select id from perf_steps where name = ?", (key,))
+                step_id = cursor.fetchone()[0]
+        else:
+                step_id = step_id_cursor[0]
+        c.execute("insert into perf_measurements (stepid, run_id, step_time) values (?, ?, ?)", (step_id, run_id, timing))
+        db.commit()
+
 # Pass the filenames of the logfiles you want to parse in on the command line.
 def main(args):
 	#samples = load_sample_keys()
@@ -158,9 +173,12 @@ def main(args):
 			t = parse_file(arg)	
 			#sample = samples[arg]
 			sample = "Test"
+                        db = sqlite3.connect(db_fn)
 			for key in t.keys(): 
 				if t[key]  != 0:
 					print '%s\t%s\t%d' % ( sample, key.replace(' ', '_'), t[key] )
+                                        insert_run_phase_time(db, run_id, key.replace(' ', '_'), t[key])
+                        db.close()
 			sampleCount += 1
 
 	except StepException as e: 
