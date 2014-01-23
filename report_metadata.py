@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+#
+# Copyright (c) 2014. Mount Sinai School of Medicine
+#
+
 import re
 import sys
 import datetime
@@ -14,29 +18,28 @@ def main(argv):
         parser.error("Wrong number of arguments")
     logfile = args[0]
     sqlitedb_filename = args[1]
+    row_id = report_metadata_to_db(logfile, sqlitedb_filename)
+    print row_id
+
+def report_metadata_to_db(logfile, sqlitedb_filename):
     inf = open(logfile, 'r')
     run_time_pattern = re.compile("Date/Time: (\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2})")
     run_args_pattern = re.compile("Program Args: (.*)$")
-    parsed_run_time = False
-    parsed_run_args = False
     run_date = ''
     run_args = ''
     for line in [x.rstrip('\n') for x in inf.readlines()]: 
         m = run_time_pattern.search(line)
         if m:
             run_date = m.group(1)
-            parsed_run_time = True
         m = run_args_pattern.search(line)
         if m:
             run_args = m.group(1)
-            parsed_run_args = True
-        if parsed_run_args and parsed_run_time:
+        if run_date and run_args:
+            print "Timestamp for this run: " + run_date
+            row_id = createRunMetadataIfDoesNotExist(run_date, run_args, sqlitedb_filename)
             break
-
-    if parsed_run_args and parsed_run_time:
-        print "Timestamp for this run: " + run_date
-        createRunMetadataIfDoesNotExist(run_date, run_args, sqlitedb_filename)
-
+    inf.close()
+    return row_id
 
 # Copied from stack overflow
 def unix_time(dt):
@@ -56,8 +59,11 @@ def createRunMetadataIfDoesNotExist(run_date, run_args, sqlitedb_filename):
     except sqlite3.IntegrityError as err:
         print "Run metadata (args, timestamp) already existed."
 
+    result = c.execute("select rowid from run_timing_metadata where run_timestamp = ? and run_args = ?", (seconds_since_epoch, run_args))
+    row_id = result.fetchone()[0]
     db.commit()
     db.close()
+    return row_id
     
 if __name__=='__main__': 
 	main(sys.argv)
