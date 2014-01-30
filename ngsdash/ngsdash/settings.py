@@ -59,7 +59,7 @@ WSGI_APPLICATION = 'ngsdash.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/hpc/users/sidhwn01/db.sqlite3',
+        'NAME': '/Users/nealsid/db.sqlite3',
     }
 }
 
@@ -81,3 +81,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 
 STATIC_URL = '/static/'
+
