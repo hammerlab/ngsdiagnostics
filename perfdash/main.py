@@ -52,8 +52,17 @@ def data():
     rows = cur.fetchall()
     # This is probably really slow.  We need to convert the rows into
     # a list of lists, where inner list has the phase name as the
-    # first element and the measurements as the remainder.
+    # first element and the measurements as the remainder.  We iterate
+    # through the result set and store the measurement into a
+    # dictionary of dictionaries.  The outer dictionary key is
+    # phase_name, and its lookup results in a dictionary who's key is
+    # timestamp and value is the perf measurement.  
+    # TODO(nealsid): Read the database section from
+    # https://leanpub.com/D3-Tips-and-Tricks, as there is probably a
+    # much easier way to issue SQL queries that can transform the data
+    # into something that d3 can use.
     data_dict = {}
+    # We need to keep track of all the timestamps
     timestamps = set()
     for x in rows:
         # Each element in rows is a tuple of 3 elements, and the first
@@ -80,16 +89,7 @@ def data():
             else:
                 one_phase_data.append('')
         data.append(one_phase_data)
-    # Hardcoded data until I get the perf data DB model ported with Flask
-    # data = [['step','2013-09-11 14:34:30+00:00','2013-09-11 14:34:32+00:00','2013-09-11 14:34:36+00:00','2013-09-11 14:34:41+00:00','2013-09-13 10:13:03+00:00'],
-    #  ['MergeSamFiles','17503','10020','11940','10961','3196'],
-    #  ['wallclock','92100','58678','61922','86268','30997'],
-    #  ['PrintReads','2433','1633','1773','1864','1680'],
-    #  ['RealignerTargetCreator','771','577','711','605','551'],
-    #  ['IndelRealigner','1035','628','621','620','445'],
-    #  ['MarkDuplicates','19983','9165','8141','32254','3540'],
-    #  ['BaseRecalibrator','1142','1485','986','103','1064'],
-    #  ['SortSam','20286','15122','14641','14882','8370']]
+    # TODO (nealsid): Move the step filtering into the query itself. 
     requested_steps = request.args.get('requested_steps')
     new_data = data
     if requested_steps:
@@ -107,13 +107,12 @@ def data():
 
 @app.route('/')
 def index():
-    # Hardcoded data until I get the perf data ported from the Django store to the Flask store
+    # TODO (nealsid): Query step names from database.
     step_names = ["MergeSamFiles", "PrintReads", "MarkDuplicates", "SortSam", "wallclock", "IndelRealigner", "BaseRecalibrator", "RealignerTargetCreator"];
     return render_template('main.html', step_names_json=json.dumps(step_names), step_names=step_names)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 def init_db():
     with app.app_context():

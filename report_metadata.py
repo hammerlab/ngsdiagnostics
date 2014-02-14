@@ -27,6 +27,7 @@ def report_metadata_to_db(logfile, sqlitedb_filename):
     run_args_pattern = re.compile("Program Args: (.*)$")
     run_date = ''
     run_args = ''
+    print logfile
     for line in [x.rstrip('\n') for x in inf.readlines()]: 
         m = run_time_pattern.search(line)
         if m:
