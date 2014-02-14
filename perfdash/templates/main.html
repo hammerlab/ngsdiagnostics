@@ -59,9 +59,9 @@
     <div class="col-md-3">
 	<center>
 	  <h1>Phase</h1>
-	  <h3 class="phaseoption" id="All" onclick="markPhaseSelected(event);">All</h3>
+	  <h3 class="phaseoption" id="All" onclick="markPhaseSelected(event); fetchDataAndCreateBarChart();">All</h3>
 	  {% for step in step_names %}
-	  <h3 class="phaseoption" id="{{ step }}" onclick="markPhaseSelected(event);">{{ step }}</h3> 
+	  <h3 class="phaseoption" id="{{ step }}" onclick="markPhaseSelected(event); fetchDataAndCreateBarChart();">{{ step }}</h3> 
 	  {% endfor %}
 	</center>
     </div>
@@ -92,13 +92,24 @@
 		     .orient("left")
 		     .tickFormat(d3.format(".2s"));
 
-   var svg = d3.select("#chart").append("svg")
-	       .attr("width", width + margin.left + margin.right)
-							  .attr("height", height + margin.top + margin.bottom)
-												      .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+   function findSelectedPhases() {
+     return jQuery.makeArray($(".phaseselected").map(function (i, val) { return val.innerText; })).join(",")
+   }
 
    function fetchDataAndCreateBarChart(phases) {
-     d3.tsv("/perfdash/data", function(error, data) {
+     var phases = findSelectedPhases();
+     url_string = "/perfdash/data";
+     if (phases != "") {
+	url_string = url_string + "?requested_steps=" + phases;
+     }
+     d3.tsv(url_string, function(error, data) {
+       d3.select("#chart").select("svg").remove();
+       var svg = d3.select("#chart").append("svg")
+		   .attr("width", width + margin.left + margin.right)
+		   .attr("height", height + margin.top + margin.bottom)
+		   .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
        var otherColumns = d3.keys(data[0]).filter(function(key) { return key !== "step"; });
 
        data.forEach(function(d) {
