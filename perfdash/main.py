@@ -3,7 +3,7 @@ from flask import Flask, request, g, render_template
 import csv
 import json
 import sqlite3
-import StringIO
+import io
 import os
 import datetime
 
@@ -96,10 +96,10 @@ def data():
         new_data = [data[0]]
         requested_steps = [x.lower() for x in requested_steps.split(",")]
         app.logger.debug("requested steps: %s", requested_steps)
-        new_data.extend(filter(lambda step_data: step_data[0].lower() in requested_steps, data[1:]))
+        new_data.extend([step_data for step_data in data[1:] if step_data[0].lower() in requested_steps])
     app.logger.debug("new data: %s", str(new_data))
     app.logger.debug("Returning data for following steps: %s", ",".join([x[0] for x in new_data]))
-    output = StringIO.StringIO()
+    output = io.StringIO()
     csv_writer = csv.writer(output, delimiter='	')
     for x in new_data:
         csv_writer.writerow(x)

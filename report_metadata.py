@@ -19,7 +19,7 @@ def main(argv):
     logfile = args[0]
     sqlitedb_filename = args[1]
     row_id = report_metadata_to_db(logfile, sqlitedb_filename)
-    print row_id
+    print(row_id)
 
 def report_metadata_to_db(logfile, sqlitedb_filename):
     inf = open(logfile, 'r')
@@ -27,7 +27,7 @@ def report_metadata_to_db(logfile, sqlitedb_filename):
     run_args_pattern = re.compile("Program Args: (.*)$")
     run_date = ''
     run_args = ''
-    print logfile
+    print(logfile)
     for line in [x.rstrip('\n') for x in inf.readlines()]: 
         m = run_time_pattern.search(line)
         if m:
@@ -36,7 +36,7 @@ def report_metadata_to_db(logfile, sqlitedb_filename):
         if m:
             run_args = m.group(1)
         if run_date and run_args:
-            print "Timestamp for this run: " + run_date
+            print("Timestamp for this run: " + run_date)
             row_id = createRunMetadataIfDoesNotExist(run_date, run_args, sqlitedb_filename)
             break
     inf.close()
@@ -58,7 +58,7 @@ def createRunMetadataIfDoesNotExist(run_date, run_args, sqlitedb_filename):
     try:
         c.execute("insert into run_timing_metadata (run_timestamp, run_args) values(?, ?)", (seconds_since_epoch, run_args))
     except sqlite3.IntegrityError as err:
-        print "Run metadata (args, timestamp) already existed."
+        print("Run metadata (args, timestamp) already existed.")
 
     result = c.execute("select rowid from run_timing_metadata where run_timestamp = ? and run_args = ?", (seconds_since_epoch, run_args))
     row_id = result.fetchone()[0]

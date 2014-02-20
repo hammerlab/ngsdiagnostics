@@ -113,7 +113,7 @@ def parse_file(filename):
 						starts[body] = logtime
 					elif edgeType == 'Done':
 						ends[body] = logtime
-						if starts.has_key(body):
+						if body in starts:
 							time = ends[body].timestamp - starts[body].timestamp
 							#print body, time
 							#print '\t%.1f mins' % (time / 60.0)
@@ -127,7 +127,7 @@ def parse_file(filename):
 	#Average out times depending on number of calls
 	for step in steps:
 		if total_calls[step] != 0:
-			print step, total_times[step]
+			print(step, total_times[step])
 			total_times[step] /= total_calls[step]
 	if len(logtimes) > 0: 
 		execution = 0.0
@@ -145,7 +145,7 @@ def parse_file(filename):
 		for step in steps:
 			if total_times[step] != 0:
 				frac = float(total_times[step]) / float(execution)
-				print '%.1f\t%.1f%%\t%s' % (total_times[step], 100.0 * frac, step)
+				print('%.1f\t%.1f%%\t%s' % (total_times[step], 100.0 * frac, step))
 	return total_times
 
 def insert_run_phase_time(db, run_id, key, timing):
@@ -174,16 +174,16 @@ def main(args):
 			#sample = samples[arg]
 			sample = "Test"
                         db = sqlite3.connect(db_fn)
-			for key in t.keys(): 
+			for key in list(t.keys()): 
 				if t[key]  != 0:
-					print '%s\t%s\t%d' % ( sample, key.replace(' ', '_'), t[key] )
+					print('%s\t%s\t%d' % ( sample, key.replace(' ', '_'), t[key] ))
                                         insert_run_phase_time(db, run_id, key.replace(' ', '_'), t[key])
                         db.close()
 			sampleCount += 1
 
 	except StepException as e: 
-		print e.found 
-		print e.line
+		print(e.found) 
+		print(e.line)
 
 if __name__=='__main__': 
 	main(sys.argv[1:])
