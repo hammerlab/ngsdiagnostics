@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='perfdash',
+    name='ngsdiagnostics',
     version='0.1',
     long_description=__doc__,
     packages=['web/perfdash'],
