@@ -7,6 +7,8 @@ import io
 import os
 import datetime
 
+from perfdash import app
+
 
 def connect_db():
     """Connects to the specific database."""
