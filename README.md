@@ -1,7 +1,7 @@
 ngsdiagnostics
 ==============
 
-Diagnostic Scripts for MSSM NGS Pipeline
+Diagnostic Scripts for the ISMMS NGS Pipeline
 
 To run:
 ```
