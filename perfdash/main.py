@@ -36,7 +36,12 @@ def get_db():
 
 @app.route('/perfdash/data')
 def data():
-    query = "select name, step_time, run_timestamp from perf_steps, perf_measurements, run_timing_metadata where perf_measurements.stepid = perf_steps.id and perf_measurements.run_id = run_timing_metadata.rowid"
+    query = """\
+SELECT name, step_time, run_timestamp
+FROM   perf_steps, perf_measurements, run_timing_metadata
+WHERE  perf_measurements.stepid = perf_steps.id AND
+       perf_measurements.run_id = run_timing_metadata.rowid
+"""
     db = get_db()
     cur = db.execute(query)
     rows = cur.fetchall()
@@ -46,7 +51,7 @@ def data():
     # through the result set and store the measurement into a
     # dictionary of dictionaries.  The outer dictionary key is
     # phase_name, and its lookup results in a dictionary who's key is
-    # timestamp and value is the perf measurement.  
+    # timestamp and value is the perf measurement.
     # TODO(nealsid): Read the database section from
     # https://leanpub.com/D3-Tips-and-Tricks, as there is probably a
     # much easier way to issue SQL queries that can transform the data
@@ -67,7 +72,8 @@ def data():
 
     header_list = ['step']
     sorted_timestamps = sorted(timestamps)
-    header_list.extend([datetime.datetime.fromtimestamp(x).__str__() for x in sorted_timestamps])
+    header_list.extend([datetime.datetime.fromtimestamp(x).__str__()
+                        for x in sorted_timestamps])
     data = []
     data.append(header_list)
     for phase in data_dict:
@@ -79,16 +85,18 @@ def data():
             else:
                 one_phase_data.append('')
         data.append(one_phase_data)
-    # TODO (nealsid): Move the step filtering into the query itself. 
+    # TODO (nealsid): Move the step filtering into the query itself.
     requested_steps = request.args.get('requested_steps')
     new_data = data
     if requested_steps:
         new_data = [data[0]]
         requested_steps = [x.lower() for x in requested_steps.split(",")]
         app.logger.debug("requested steps: %s", requested_steps)
-        new_data.extend([step_data for step_data in data[1:] if step_data[0].lower() in requested_steps])
+        new_data.extend([step_data for step_data in data[1:]
+                         if step_data[0].lower() in requested_steps])
     app.logger.debug("new data: %s", str(new_data))
-    app.logger.debug("Returning data for following steps: %s", ",".join([x[0] for x in new_data]))
+    app.logger.debug("Returning data for following steps: %s",
+                     ",".join([x[0] for x in new_data]))
     output = io.StringIO()
     csv_writer = csv.writer(output, delimiter='	')
     for x in new_data:
@@ -98,8 +106,12 @@ def data():
 @app.route('/')
 def index():
     # TODO (nealsid): Query step names from database.
-    step_names = ["MergeSamFiles", "PrintReads", "MarkDuplicates", "SortSam", "wallclock", "IndelRealigner", "BaseRecalibrator", "RealignerTargetCreator"];
-    return render_template('main.html', step_names_json=json.dumps(step_names), step_names=step_names)
+    step_names = ["MergeSamFiles", "PrintReads", "MarkDuplicates", "SortSam",
+                  "wallclock", "IndelRealigner", "BaseRecalibrator",
+                  "RealignerTargetCreator"];
+    return render_template('main.html',
+                           step_names_json=json.dumps(step_names),
+                           step_names=step_names)
 
 if __name__ == '__main__':
     app.run(debug=True)
