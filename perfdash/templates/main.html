@@ -6,15 +6,15 @@
   <link rel="stylesheet" href="static/css/main.css"/>
 </head>
 
-<body onload="fetchDataAndCreateBarChart();">
+<body>
   <div class="row">
     <div class="col-md-1"></div>
     <div class="col-md-3">
       <center>
         <h1>Phase</h1>
-	<h3 class="phaseoption" id="All" onclick="markPhaseSelected(event); fetchDataAndCreateBarChart();">All</h3>
+	<h3 class="phaseoption" id="All">All</h3>
 	{% for step in step_names %}
-	<h3 class="phaseoption" id="{{ step }}" onclick="markPhaseSelected(event); fetchDataAndCreateBarChart();">{{ step }}</h3> 
+	<h3 class="phaseoption" id="{{ step }}">{{ step }}</h3>
 	{% endfor %}
       </center>
     </div>

@@ -3,7 +3,7 @@ function markPhaseSelected(event) {
   var regex = new RegExp("(?:^|\\s)" + phaseSelectedClassname + "(?!\\S)", '');
   var el = event.target
   if (el.className.match(regex)) {
-    el.className =	el.className.replace(regex, '')
+    el.className = el.className.replace(regex, '')
   } else {
     el.className += " " + phaseSelectedClassname;
   }
@@ -116,3 +116,12 @@ function fetchDataAndCreateBarChart(phases) {
           .text(function(d) { return d; });
   });
 }
+
+$(document).ready(function() {
+  $("h3.phaseoption").click(function(event) {
+    markPhaseSelected(event);
+    fetchDataAndCreateBarChart();
+  });
+
+  fetchDataAndCreateBarChart();
+});
