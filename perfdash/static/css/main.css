@@ -1,0 +1,23 @@
+.chart rect {
+  fill: steelblue;
+}
+
+.chart text {
+  fill: white;
+  font: 10px sans-serif;
+  text-anchor: end;
+}
+
+.rounded {
+  background-color: lightgray;
+  border-radius: 10px;
+}
+
+.phaseoption:hover {
+  background-color: blue;
+  color: lightgray;
+}
+
+.phaseselected {
+  background-color: lightblue;
+}
