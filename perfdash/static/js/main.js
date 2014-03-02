@@ -19,15 +19,15 @@ var height = 500 - margin.top - margin.bottom;
 var y = d3.scale.ordinal()
                 .rangeRoundBands([0, height], .1);
 
-var x = d3.scale.linear()
-                .range([0, width * 0.8]);
+var x;
+var nx = function(secs) { return x(secondsToRefDate(secs)) };
 
 var color = d3.scale.category10();
 
-var xAxis = d3.svg.axis()
-                  .scale(x)
-                  .orient("bottom")
-                  .tickFormat(d3.format(".2s"));
+// This lets use use d3.scale.time for a nice time interval scale.
+function secondsToRefDate(secs) {
+  return new Date(2012, 0, 1, 0, 0, secs);
+}
 
 var yAxis = d3.svg.axis()
                   .scale(y)
@@ -85,7 +85,15 @@ function fetchDataAndCreateBarChart() {
     });
 
     y.domain(d3.keys(seriesMap).sort());
-    x.domain([0, d3.max(series.map(function(s) { return s.sum; }))]);
+    x = d3.time.scale()
+               .range([0, width * 0.8])
+               .domain([secondsToRefDate(0),
+                        secondsToRefDate(d3.max(series.map(function(s) { return s.sum; })))]);
+
+    var xAxis = d3.svg.axis()
+                      .scale(x)
+                      .orient("bottom")
+                      .tickFormat(d3.time.format("%H:%M"));
 
     svg.append("g")
        .attr("class", "x axis")
@@ -109,8 +117,8 @@ function fetchDataAndCreateBarChart() {
          .enter()
          .append("rect")
          .attr("height", y.rangeBand())
-         .attr("x", function(pt) { return x(pt.x0); })
-         .attr("width", function(pt) { return x(pt.x0 + pt.value) - x(pt.x0) })
+         .attr("x", function(pt) { return nx(pt.x0); })
+         .attr("width", function(pt) { return nx(pt.x0 + pt.value) - nx(pt.x0) })
          .style("fill", function(pt) { return color(pt.step); });
 
     var legend = svg.selectAll(".legend")
