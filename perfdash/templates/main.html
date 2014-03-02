@@ -8,17 +8,19 @@
 
 <body>
   <div class="row">
-    <div class="col-md-1"></div>
-    <div class="col-md-3">
+    <div class="col-md-12" id="chart"></div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12">
       <center>
-        <h1>Phase</h1>
-	<h3 class="phaseoption" id="All">All</h3>
+        <b>Phase</b>: 
+        <a href="#" id="All">(all)</a>
 	{% for step in step_names %}
-	<h3 class="phaseoption" id="{{ step }}">{{ step }}</h3>
+        <input class=phaseoption type=checkbox id="{{ step }}" checked /><label for="{{ step }}">&nbsp;{{ step }}</label>
 	{% endfor %}
       </center>
     </div>
-    <div class="col-md-7" id="chart"></div>
   </div>
   <script src="static/js/jquery-1.10.1.min.js"></script>
   <script src="static/js/jquery-migrate-1.2.1.min.js"></script>
