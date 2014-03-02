@@ -1,16 +1,5 @@
 'use strict';
 
-function markPhaseSelected(event) {
-  var phaseSelectedClassname = "phaseselected";
-  var regex = new RegExp("(?:^|\\s)" + phaseSelectedClassname + "(?!\\S)", '');
-  var el = event.target
-  if (el.className.match(regex)) {
-    el.className = el.className.replace(regex, '')
-  } else {
-    el.className += " " + phaseSelectedClassname;
-  }
-}
-
 
 var margin = {top: 20, right: 20, bottom: 30, left: 200};
 var width = 1280 - margin.left - margin.right;
@@ -40,8 +29,10 @@ var yAxis = d3.svg.axis()
                   .orient("left");
 
 function findSelectedPhases() {
-  return jQuery.makeArray($(".phaseselected").map(function (i, val) { return val.innerText; }))
-               .join(",")
+  return $.makeArray($('.phaseoption')
+      .filter(':checked')
+      .map(function(i, el) { return $(el).attr("id"); }))
+      .join(",");
 }
 
 function fetchDataAndCreateBarChart() {
@@ -144,8 +135,11 @@ function fetchDataAndCreateBarChart() {
 }
 
 $(document).ready(function() {
-  $("h3.phaseoption").click(function(event) {
-    markPhaseSelected(event);
+  $(".phaseoption").click(function(event) {
+    fetchDataAndCreateBarChart();
+  });
+  $("#All").click(function() {
+    $('.phaseoption').attr('checked', true);
     fetchDataAndCreateBarChart();
   });
 
