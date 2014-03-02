@@ -21,3 +21,15 @@
 .phaseselected {
   background-color: lightblue;
 }
+
+.axis.x path,
+.axis.x line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+
+.axis.x .tick line {
+  stroke: #888;
+  stroke-dasharray: 5, 5;
+}

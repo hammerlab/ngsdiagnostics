@@ -19,7 +19,13 @@ var height = 500 - margin.top - margin.bottom;
 var y = d3.scale.ordinal()
                 .rangeRoundBands([0, height], .1);
 
-var x;
+var x = d3.time.scale()
+               .range([0, width * 0.8]);
+var xAxis = d3.svg.axis()
+                  .scale(x)
+                  .orient("bottom")
+                  .tickFormat(d3.time.format("%H:%M"))
+                  .tickSize(-height, 1);
 var nx = function(secs) { return x(secondsToRefDate(secs)) };
 
 var color = d3.scale.category10();
@@ -84,16 +90,9 @@ function fetchDataAndCreateBarChart() {
       }
     });
 
+    x.domain([secondsToRefDate(0),
+              secondsToRefDate(d3.max(series.map(function(s) { return s.sum; })))]);
     y.domain(d3.keys(seriesMap).sort());
-    x = d3.time.scale()
-               .range([0, width * 0.8])
-               .domain([secondsToRefDate(0),
-                        secondsToRefDate(d3.max(series.map(function(s) { return s.sum; })))]);
-
-    var xAxis = d3.svg.axis()
-                      .scale(x)
-                      .orient("bottom")
-                      .tickFormat(d3.time.format("%H:%M"));
 
     svg.append("g")
        .attr("class", "x axis")
