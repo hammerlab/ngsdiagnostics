@@ -1,9 +1,7 @@
 from flask import request, g, render_template
 
-import csv
 import json
 import sqlite3
-import io
 import os
 import datetime
 
@@ -97,11 +95,7 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
     app.logger.debug("new data: %s", str(new_data))
     app.logger.debug("Returning data for following steps: %s",
                      ",".join([x[0] for x in new_data]))
-    output = io.StringIO()
-    csv_writer = csv.writer(output, delimiter='	')
-    for x in new_data:
-        csv_writer.writerow(x)
-    return output.getvalue()
+    return '\n'.join(['\t'.join([str(x) for x in row]) for row in new_data])
 
 @app.route('/')
 def index():
