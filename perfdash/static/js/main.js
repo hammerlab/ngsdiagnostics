@@ -48,15 +48,17 @@ function fetchDataAndCreateBarChart() {
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-    debugger;
 
     var seriesNames = d3.keys(data[0]).filter(function(key) {
-      return key !== "step" && key !== "sample name";
+      return key !== "step";
     });
-    var stepNames = data.map(function(d) { return d.step });
+    var stepNames = data
+        .map(function(d) { return d.step })
+        .filter(function(x) { return x !== 'sample name' });
     color.domain(stepNames);
 
-    data.forEach(function(d) {
+    data.shift();  // remove "sample name" row.
+    data.forEach(function(d, i) {
       d.stepTimes = seriesNames.map(function(name) { return {name: name, value: +d[name]}; });
     });
 
@@ -68,12 +70,13 @@ function fetchDataAndCreateBarChart() {
     data.forEach(function(d) {
       d.stepTimes.forEach(function(pt) {
         var s = seriesMap[pt.name];
-        if (d.step == 'sample name') {
-          s.label = pt.value;
-        } else {
-          s.steps.push({step: d.step, value: pt.value, x0: s.sum});
-          s.sum += pt.value;
-        }
+        s.steps.push({step: d.step, value: pt.value, x0: s.sum});
+        s.sum += pt.value;
+      });
+    });
+    data.filter(function(d) { return d.step == 'sample name' }).forEach(function(row) {
+      seriesNames.forEach(function(name) {
+        seriesMap[name].label = row[name];
       });
     });
 
@@ -83,7 +86,7 @@ function fetchDataAndCreateBarChart() {
         steps: entry.steps,
         sum: entry.sum,
         name: seriesName,
-        label: null
+        label: entry.label
       }
     });
 
