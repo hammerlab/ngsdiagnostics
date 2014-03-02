@@ -12,19 +12,17 @@ function markPhaseSelected(event) {
 }
 
 
-var margin = {top: 20, right: 20, bottom: 30, left: 40};
-var width = 960 - margin.left - margin.right;
+var margin = {top: 20, right: 20, bottom: 30, left: 200};
+var width = 1280 - margin.left - margin.right;
 var height = 500 - margin.top - margin.bottom;
 
 var y = d3.scale.ordinal()
                 .rangeRoundBands([0, height], .1);
 
 var x = d3.scale.linear()
-                .range([0, width]);
+                .range([0, width * 0.8]);
 
-var color = d3.scale.ordinal()
-                    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b",
-                            "#a05d56", "#d0743c", "#ff8c00"]);
+var color = d3.scale.category10();
 
 var xAxis = d3.svg.axis()
                   .scale(x)
@@ -54,16 +52,19 @@ function fetchDataAndCreateBarChart() {
                 .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var otherColumns = d3.keys(data[0]).filter(function(key) { return key !== "step"; });
-    color.domain(otherColumns);
+    data = data.filter(function(d) { return d.step !== 'wallclock' });
+
+    var seriesNames = d3.keys(data[0]).filter(function(key) { return key !== "step"; });
+    var stepNames = data.map(function(d) { return d.step });
+    color.domain(stepNames);
 
     data.forEach(function(d) {
-      d.stepTimes = otherColumns.map(function(name) { return {name: name, value: +d[name]}; });
+      d.stepTimes = seriesNames.map(function(name) { return {name: name, value: +d[name]}; });
     });
 
     // Rotate the data so that it's run-major, step-minor.
     var seriesMap = {};
-    otherColumns.forEach(function(name) {
+    seriesNames.forEach(function(name) {
       seriesMap[name] = {steps: [], sum: 0.0};
     });
     data.forEach(function(d) {
@@ -97,24 +98,23 @@ function fetchDataAndCreateBarChart() {
        .attr("class", "y axis")
        .call(yAxis);
 
-    var series = svg.selectAll(".series")
+    var seriesG = svg.selectAll(".series")
                     .data(series)
                     .enter().append("g")
                     .attr("class", "g")
                     .attr("transform", function(d) { return "translate(0," + y(d.name) + ")"; });
 
-    series.selectAll("rect")
+    seriesG.selectAll("rect")
          .data(function(s) { return s.steps })
          .enter()
          .append("rect")
          .attr("height", y.rangeBand())
          .attr("x", function(pt) { return x(pt.x0); })
-         .attr("width", function(pt) { return x(pt.x0 + pt.value) })
+         .attr("width", function(pt) { return x(pt.x0 + pt.value) - x(pt.x0) })
          .style("fill", function(pt) { return color(pt.step); });
 
-    /*
     var legend = svg.selectAll(".legend")
-                    .data(otherColumns.slice())
+                    .data(stepNames.slice())
                     .enter()
                     .append("g")
                     .attr("class", "legend")
@@ -132,7 +132,6 @@ function fetchDataAndCreateBarChart() {
           .attr("dy", ".35em")
           .style("text-anchor", "end")
           .text(function(d) { return d; });
-    */
   });
 }
 
