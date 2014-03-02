@@ -101,7 +101,8 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
 def index():
     # TODO (nealsid): Query step names from database.
     step_names = ["MergeSamFiles", "PrintReads", "MarkDuplicates", "SortSam",
-                  "wallclock", "IndelRealigner", "BaseRecalibrator",
+                  # "wallclock",
+                  "IndelRealigner", "BaseRecalibrator",
                   "RealignerTargetCreator"];
     return render_template('main.html',
                            step_names_json=json.dumps(step_names),

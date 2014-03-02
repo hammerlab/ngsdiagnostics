@@ -1,3 +1,5 @@
+'use strict';
+
 function markPhaseSelected(event) {
   var phaseSelectedClassname = "phaseselected";
   var regex = new RegExp("(?:^|\\s)" + phaseSelectedClassname + "(?!\\S)", '');
@@ -14,35 +16,33 @@ var margin = {top: 20, right: 20, bottom: 30, left: 40};
 var width = 960 - margin.left - margin.right;
 var height = 500 - margin.top - margin.bottom;
 
-var x0 = d3.scale.ordinal()
-                 .rangeRoundBands([0, width], .1);
+var y = d3.scale.ordinal()
+                .rangeRoundBands([0, height], .1);
 
-var x1 = d3.scale.ordinal();
-
-var y = d3.scale.linear()
-                .range([height, 0]);
+var x = d3.scale.linear()
+                .range([0, width]);
 
 var color = d3.scale.ordinal()
                     .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b",
                             "#a05d56", "#d0743c", "#ff8c00"]);
 
 var xAxis = d3.svg.axis()
-                  .scale(x0)
-                  .orient("bottom");
+                  .scale(x)
+                  .orient("bottom")
+                  .tickFormat(d3.format(".2s"));
 
 var yAxis = d3.svg.axis()
                   .scale(y)
-                  .orient("left")
-                  .tickFormat(d3.format(".2s"));
+                  .orient("left");
 
 function findSelectedPhases() {
   return jQuery.makeArray($(".phaseselected").map(function (i, val) { return val.innerText; }))
                .join(",")
 }
 
-function fetchDataAndCreateBarChart(phases) {
+function fetchDataAndCreateBarChart() {
   var phases = findSelectedPhases();
-  url_string = "/perfdash/data";
+  var url_string = "/perfdash/data";
   if (phases != "") {
      url_string = url_string + "?requested_steps=" + phases;
   }
@@ -55,46 +55,64 @@ function fetchDataAndCreateBarChart(phases) {
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var otherColumns = d3.keys(data[0]).filter(function(key) { return key !== "step"; });
+    color.domain(otherColumns);
 
     data.forEach(function(d) {
       d.stepTimes = otherColumns.map(function(name) { return {name: name, value: +d[name]}; });
     });
 
-    x0.domain(data.map(function(d) { return d.step; }));
-    x1.domain(otherColumns).rangeRoundBands([0, x0.rangeBand()]);
-    y.domain([0, d3.max(data, function(d) { return d3.max(d.stepTimes, function(d) { return d.value; }); })]);
+    // Rotate the data so that it's run-major, step-minor.
+    var seriesMap = {};
+    otherColumns.forEach(function(name) {
+      seriesMap[name] = {steps: [], sum: 0.0};
+    });
+    data.forEach(function(d) {
+      d.stepTimes.forEach(function(pt) {
+        var s = seriesMap[pt.name];
+        s.steps.push({step: d.step, value: pt.value, x0: s.sum});
+        s.sum += pt.value;
+      });
+    });
+
+    var series = d3.keys(seriesMap).map(function(seriesName) {
+      var entry = seriesMap[seriesName];
+      return {
+        steps: entry.steps,
+        sum: entry.sum,
+        name: seriesName
+      }
+    });
+
+    y.domain(d3.keys(seriesMap).sort());
+    x.domain([0, d3.max(series.map(function(s) { return s.sum; }))]);
 
     svg.append("g")
        .attr("class", "x axis")
        .attr("transform", "translate(0," + height + ")")
-       .call(xAxis);
+       .call(xAxis)
+       .append("text")
+       .text("Time (s)");
 
     svg.append("g")
        .attr("class", "y axis")
-       .call(yAxis)
-       .append("text")
-       .attr("transform", "rotate(-90)")
-       .attr("y", 6)
-       .attr("dy", ".71em")
-       .style("text-anchor", "end")
-       .text("Step Time (s)");
+       .call(yAxis);
 
-    var state = svg.selectAll(".state")
-                   .data(data)
-                   .enter().append("g")
-                   .attr("class", "g")
-                   .attr("transform", function(d) { return "translate(" + x0(d.step) + ",0)"; });
+    var series = svg.selectAll(".series")
+                    .data(series)
+                    .enter().append("g")
+                    .attr("class", "g")
+                    .attr("transform", function(d) { return "translate(0," + y(d.name) + ")"; });
 
-    state.selectAll("rect")
-         .data(function(d) { return d.stepTimes; })
+    series.selectAll("rect")
+         .data(function(s) { return s.steps })
          .enter()
          .append("rect")
-         .attr("width", x1.rangeBand())
-         .attr("x", function(d) { return x1(d.name); })
-         .attr("y", function(d) { return y(d.value); })
-         .attr("height", function(d) { return height - y(d.value); })
-         .style("fill", function(d) { return color(d.name); });
+         .attr("height", y.rangeBand())
+         .attr("x", function(pt) { return x(pt.x0); })
+         .attr("width", function(pt) { return x(pt.x0 + pt.value) })
+         .style("fill", function(pt) { return color(pt.step); });
 
+    /*
     var legend = svg.selectAll(".legend")
                     .data(otherColumns.slice())
                     .enter()
@@ -114,6 +132,7 @@ function fetchDataAndCreateBarChart(phases) {
           .attr("dy", ".35em")
           .style("text-anchor", "end")
           .text(function(d) { return d; });
+    */
   });
 }
 
