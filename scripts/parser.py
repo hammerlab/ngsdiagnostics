@@ -131,14 +131,8 @@ def parse_file(filename):
       total_times[step] /= total_calls[step]
   if len(logtimes) > 0: 
     execution = 0.0
-    for step in steps: execution += total_times[step]
-    wallclock = logtimes[len(logtimes)-1].timestamp - logtimes[0].timestamp
-    
-    # also insert a false step called 'wallclock', whose value is the total elapsed time 
-    # from the first to the last step in the log file itself.
-    # (Note that, because of parallelism between the subtasks, this isn't the same as just the
-    #  sum of the total_time values)
-    total_times['wallclock'] = wallclock
+    for step in steps: 
+      execution += total_times[step]
 
     #print 'Wallclock Time: %.1f mins (%.1f hours)' % ( wallclock / 60.0, wallclock / (60.0 * 60.0))
     #print 'Total Computation Time: %.1f mins (%.1f hours)' % (execution / 60.0, execution / (60.0 * 60.0))
