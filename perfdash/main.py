@@ -35,7 +35,7 @@ def get_db():
 @app.route('/perfdash/data')
 def data():
     query = """\
-SELECT name, step_time, run_timestamp
+SELECT name, step_time, run_timestamp, sample
 FROM   perf_steps, perf_measurements, run_timing_metadata
 WHERE  perf_measurements.stepid = perf_steps.id AND
        perf_measurements.run_id = run_timing_metadata.rowid
@@ -63,17 +63,21 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
         phase_name = x[0]
         if phase_name not in data_dict:
             data_dict[phase_name] = {}
-        timestamp = x[2]
+        timestamp_and_sample = (x[2], x[3])
         measurement = x[1]
-        timestamps.add(timestamp)
-        data_dict[phase_name][timestamp] = measurement
+        timestamps.add(timestamp_and_sample)
+        data_dict[phase_name][timestamp_and_sample] = measurement
 
     header_list = ['step']
-    sorted_timestamps = sorted(timestamps)
-    header_list.extend([str(datetime.datetime.fromtimestamp(x))
+    sorted_timestamps = sorted(timestamps, 
+                               key=lambda timestamp: timestamp[0])
+    header_list.extend([str(datetime.datetime.fromtimestamp(x[0]))
                         for x in sorted_timestamps])
+    sample_list = ['']
+    sample_list.extend(x[1] for x in sorted_timestamps)
     data = []
     data.append(header_list)
+    data.append(sample_list)
     for phase in data_dict:
         one_phase_data = []
         one_phase_data.append(phase)
@@ -90,7 +94,7 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
         new_data = [data[0]]
         requested_steps = [x.lower() for x in requested_steps.split(",")]
         app.logger.debug("requested steps: %s", requested_steps)
-        new_data.extend([step_data for step_data in data[1:]
+        new_data.extend([step_data for step_data in data[2:]
                          if step_data[0].lower() in requested_steps])
     app.logger.debug("new data: %s", str(new_data))
     app.logger.debug("Returning data for following steps: %s",

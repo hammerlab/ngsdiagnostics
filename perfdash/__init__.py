@@ -9,4 +9,4 @@ app.config.update(dict(
   DEBUG=True
 ))
 
-import perfdash.main
+#import perfdash.main
