@@ -99,7 +99,8 @@ function fetchDataAndCreateBarChart() {
        .attr("transform", "translate(0," + height + ")")
        .call(xAxis)
        .append("text")
-       .text("Time (s)");
+       .text("Time (hours, minutes)")
+       .attr("y", "28");
 
     svg.append("g")
        .attr("class", "y axis")
