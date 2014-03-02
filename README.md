@@ -1,11 +1,11 @@
 ngsdiagnostics
 ==============
 
-Diagnostic Scripts for the ISMMS NGS Pipeline
+Diagnostic Scripts for an NGS Pipeline
 
 To run:
 ```
-$ git clone https://git.mssm.edu/hammerlab/ngsdiagnostics.git
+$ git clone https://github.com/hammerlab/ngsdiagnostics.git
 $ cd ngsdiagnostics
 $ python setup.py install
 $ run_perfdash.py
