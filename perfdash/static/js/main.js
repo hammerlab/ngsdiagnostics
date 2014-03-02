@@ -37,6 +37,8 @@ function findSelectedPhases() {
 
 function fetchDataAndCreateBarChart() {
   var phases = findSelectedPhases();
+  var shouldSort = $('#sort').is(':checked');
+
   var url_string = "/perfdash/data";
   if (phases != "") {
      url_string = url_string + "?requested_steps=" + phases;
@@ -57,7 +59,7 @@ function fetchDataAndCreateBarChart() {
         .filter(function(x) { return x !== 'sample name' });
     color.domain(stepNames);
 
-    data.shift();  // remove "sample name" row.
+    var sampleNames = data.shift();  // remove "sample name" row.
     data.forEach(function(d, i) {
       d.stepTimes = seriesNames.map(function(name) { return {name: name, value: +d[name]}; });
     });
@@ -74,13 +76,17 @@ function fetchDataAndCreateBarChart() {
         s.sum += pt.value;
       });
     });
-    data.filter(function(d) { return d.step == 'sample name' }).forEach(function(row) {
-      seriesNames.forEach(function(name) {
-        seriesMap[name].label = row[name];
-      });
+    seriesNames.forEach(function(name) {
+      seriesMap[name].label = sampleNames[name];
     });
 
-    var series = d3.keys(seriesMap).map(function(seriesName) {
+    if (shouldSort) {
+      seriesNames.sort(function(a, b) {
+        return seriesMap[b].sum - seriesMap[a].sum;
+      });
+    }
+
+    var series = seriesNames.map(function(seriesName) {
       var entry = seriesMap[seriesName];
       return {
         steps: entry.steps,
@@ -92,7 +98,7 @@ function fetchDataAndCreateBarChart() {
 
     x.domain([secondsToRefDate(0),
               secondsToRefDate(d3.max(series.map(function(s) { return s.sum; })))]);
-    y.domain(d3.keys(seriesMap).sort());
+    y.domain(seriesNames);
 
     svg.append("g")
        .attr("class", "x axis")
@@ -107,10 +113,13 @@ function fetchDataAndCreateBarChart() {
        .call(yAxis);
 
     var seriesG = svg.selectAll(".series")
-                    .data(series)
+                    .data(series, function(s) { return s.name })
                     .enter().append("g")
-                    .attr("class", "g")
+                    .attr("class", "series");
                     .attr("transform", function(d) { return "translate(0," + y(d.name) + ")"; });
+
+    // gratuitous transition:
+    // seriesG.transition().duration(1000)
 
     seriesG.selectAll("rect")
          .data(function(s) { return s.steps })
@@ -149,6 +158,9 @@ $(document).ready(function() {
   });
   $("#All").click(function() {
     $('.phaseoption').attr('checked', true);
+    fetchDataAndCreateBarChart();
+  });
+  $('#sort').click(function() {
     fetchDataAndCreateBarChart();
   });
 
