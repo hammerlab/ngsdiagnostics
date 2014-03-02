@@ -91,7 +91,7 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
     requested_steps = request.args.get('requested_steps')
     new_data = data
     if requested_steps:
-        new_data = [data[0]]
+        new_data = [data[0], data[1]]
         requested_steps = [x.lower() for x in requested_steps.split(",")]
         app.logger.debug("requested steps: %s", requested_steps)
         new_data.extend([step_data for step_data in data[2:]
