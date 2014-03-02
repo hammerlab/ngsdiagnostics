@@ -48,10 +48,11 @@ function fetchDataAndCreateBarChart() {
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    debugger;
 
-    data = data.filter(function(d) { return d.step !== 'wallclock' });
-
-    var seriesNames = d3.keys(data[0]).filter(function(key) { return key !== "step"; });
+    var seriesNames = d3.keys(data[0]).filter(function(key) {
+      return key !== "step" && key !== "sample name";
+    });
     var stepNames = data.map(function(d) { return d.step });
     color.domain(stepNames);
 
@@ -62,13 +63,17 @@ function fetchDataAndCreateBarChart() {
     // Rotate the data so that it's run-major, step-minor.
     var seriesMap = {};
     seriesNames.forEach(function(name) {
-      seriesMap[name] = {steps: [], sum: 0.0};
+      seriesMap[name] = {steps: [], sum: 0.0, label: ''};
     });
     data.forEach(function(d) {
       d.stepTimes.forEach(function(pt) {
         var s = seriesMap[pt.name];
-        s.steps.push({step: d.step, value: pt.value, x0: s.sum});
-        s.sum += pt.value;
+        if (d.step == 'sample name') {
+          s.label = pt.value;
+        } else {
+          s.steps.push({step: d.step, value: pt.value, x0: s.sum});
+          s.sum += pt.value;
+        }
       });
     });
 
@@ -77,7 +82,8 @@ function fetchDataAndCreateBarChart() {
       return {
         steps: entry.steps,
         sum: entry.sum,
-        name: seriesName
+        name: seriesName,
+        label: null
       }
     });
 
