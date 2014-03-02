@@ -70,7 +70,7 @@ WHERE  perf_measurements.stepid = perf_steps.id AND
 
     header_list = ['step']
     sorted_timestamps = sorted(timestamps)
-    header_list.extend([datetime.datetime.fromtimestamp(x).__str__()
+    header_list.extend([str(datetime.datetime.fromtimestamp(x))
                         for x in sorted_timestamps])
     data = []
     data.append(header_list)

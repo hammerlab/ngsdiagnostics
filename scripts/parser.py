@@ -164,7 +164,6 @@ def insert_run_phase_time(db, run_id, key, timing):
 
 # Pass the filenames of the logfiles you want to parse in on the command line.
 def main(args):
-  #samples = load_sample_keys()
   db_fn = args[-1]
   try: 
     sampleCount = 0
@@ -172,6 +171,8 @@ def main(args):
       run_id = report_metadata.report_metadata_to_db(arg, db_fn)
       t = parse_file(arg) 
       #sample = samples[arg]
+      # TODO: what does this have to do with samples in the log file? it looks like it
+      # can be removed.
       sample = "Test"
       db = sqlite3.connect(db_fn)
       for key in list(t.keys()): 
