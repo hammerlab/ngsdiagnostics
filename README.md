@@ -5,6 +5,10 @@ Diagnostic Scripts for an NGS Pipeline
 
 To run:
 ```
+$ curl -O 'https://gist.github.com/vsajip/4673395/raw/3420d9150ce1e9797dc8522fce7386d8643b02a1/pyvenvex.py'
+$ python3 pyvenvex.py venv-ngsdiagnostics
+$ cd venv-ngsdiagnostics
+$ source bin/activate
 $ git clone https://github.com/hammerlab/ngsdiagnostics.git
 $ cd ngsdiagnostics
 $ python setup.py install
