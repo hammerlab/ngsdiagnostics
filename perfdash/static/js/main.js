@@ -115,7 +115,7 @@ function fetchDataAndCreateBarChart() {
     var seriesG = svg.selectAll(".series")
                     .data(series, function(s) { return s.name })
                     .enter().append("g")
-                    .attr("class", "series");
+                    .attr("class", "series")
                     .attr("transform", function(d) { return "translate(0," + y(d.name) + ")"; });
 
     // gratuitous transition:
