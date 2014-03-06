@@ -33,3 +33,22 @@
   stroke: #888;
   stroke-dasharray: 5, 5;
 }
+
+#box rect {
+  fill-opacity: 0;
+  stroke: black;
+  stroke-width: 1;
+}
+
+#box line {
+  stroke: black;
+}
+
+#box line.yaxis {
+  stroke: #ccc;
+}
+
+#box .x line, .y line {
+  stroke: #ccc;
+  shape-rendering: crispEdges;
+}
