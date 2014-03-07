@@ -14,7 +14,7 @@
   <div class="row">
     <div class="col-md-12">
       <center>
-        <b>Phase</b>: 
+        <b>Phase</b>:
         <a href="#" id="All">(all)</a>
 	{% for step in step_names %}
         <input class=phaseoption type=checkbox id="{{ step }}" checked /><label for="{{ step }}">&nbsp;{{ step }}</label>
@@ -23,6 +23,14 @@
         <p><input type=checkbox id=sort /><label for=sort>&nbsp;Sort</label></p>
       </center>
     </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12" id="box"></div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12" id="footer"><br></div>
   </div>
   <script src="static/js/jquery-1.10.1.min.js"></script>
   <script src="static/js/jquery-migrate-1.2.1.min.js"></script>
