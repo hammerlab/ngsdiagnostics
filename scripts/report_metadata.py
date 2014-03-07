@@ -4,10 +4,12 @@
 # Copyright (c) 2014. Mount Sinai School of Medicine
 #
 
-import re
-import sys
 import datetime
+import re
 import sqlite3
+import sys
+import utils
+
 from optparse import OptionParser
 
 
@@ -48,15 +50,9 @@ def report_metadata_to_db(logfile, sqlitedb_filename):
     inf.close()
     return row_id
 
-# Copied from stack overflow
-def unix_time(dt):
-    epoch = datetime.datetime.utcfromtimestamp(0)
-    td = dt - epoch
-    since_last =  (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
-    return since_last
-
 def createRunMetadataIfDoesNotExist(run_date, run_args, sample, sqlitedb_filename):
-    seconds_since_epoch = unix_time(datetime.datetime.strptime(run_date, '%Y/%m/%d %H:%M:%S'))
+    seconds_since_epoch = utils.unix_time(
+        datetime.datetime.strptime(run_date, '%Y/%m/%d %H:%M:%S'))
     
     db = sqlite3.connect(sqlitedb_filename)
     c = db.cursor()
