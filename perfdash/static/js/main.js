@@ -170,7 +170,6 @@ function fetchDataAndCreateBoxPlot() {
          .attr("y1", function(d, i) { return h - y(quartiles[i * 2]); })
          .attr("y2", function(d) { return h - y(times[d]); });
 
-      // TODO(hammer): fix the hover text by adding a class per box
       // draw the outliers
       box.selectAll(".outliers_" + i + " circle")
          .data(times.filter(function(d, i) {
