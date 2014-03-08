@@ -44,11 +44,7 @@
   stroke: black;
 }
 
-#box line.yaxis {
-  stroke: #ccc;
-}
-
-#box .x line, .y line {
+#box .x line, #box .y line {
   stroke: #ccc;
   shape-rendering: crispEdges;
 }

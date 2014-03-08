@@ -64,6 +64,12 @@ function fetchDataAndCreateBoxPlot() {
     var box_width = 20;
     var num_boxes = d3.entries(stepTimes).length;
 
+    var box_x_l = function(i) {
+      return p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r;
+    }
+    var box_x_m = function(i) { return box_x_l(i) + box_width / 2; };
+    var box_x_r = function(i) { return box_x_l(i) + box_width; };
+
     var h = 500 - p_t - p_b;
     var w = (num_boxes + 1) * (p_box_l + box_width + p_box_r);
 
@@ -72,24 +78,24 @@ function fetchDataAndCreateBoxPlot() {
                 .attr("width", w + p_l + p_r)
                 .attr("height", h + p_t + p_b)
                 .append("g")
+                .attr("class", "boxplot_content")
                 .attr("transform", "translate(" + p_l + "," + p_t + ")");
 
     /********
-     * Y Axis
+     * Y Rule
      ********/
     // TODO(hammer): use a time scale
     var y = d3.scale.linear()
                     .domain([0, maxTime])
                     .range([0, h]);
 
-    var yrule = vis.selectAll(".y g")
+    var yrule = vis.selectAll("g.y")
                    .data(y.ticks(5))
                    .enter()
                    .append("g")
                    .attr("class", "y");
 
     yrule.append("line")
-         .attr("class", "yaxis")
          .attr("x1", p_l + 5)
          .attr("x2", w)
          .attr("y1", function(d) { return h - y(d); })
@@ -112,19 +118,13 @@ function fetchDataAndCreateBoxPlot() {
                    .attr("class", "x");
 
     xrule.append("line")
-         .attr("x1", function(d, i) {
-           return p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r + box_width / 2;
-         })
-         .attr("x2", function(d, i) {
-           return p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r + box_width / 2;
-         })
+         .attr("x1", function(d, i) { return box_x_m(i); })
+         .attr("x2", function(d, i) { return box_x_m(i); })
          .attr("y1", h)
          .attr("y2", h + 4);
 
     xrule.append("text")
-         .attr("x", function(d, i) {
-           return p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r + box_width / 2;
-         })
+         .attr("x", function(d, i) { return box_x_m(i); })
          .attr("y", function(d, i) { return h + 5 + 15 * (i % 2); })
          .attr("dy", ".71em")
          .attr("text-anchor", "middle")
@@ -139,63 +139,63 @@ function fetchDataAndCreateBoxPlot() {
       var quartiles = boxQuartiles(times);
       var whisker_indices = boxWhiskers(times);
 
-      var box_x_l = p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r
-      var box_x_m = box_x_l + box_width / 2;
-      var box_x_r = box_x_l + box_width;
+      var box = vis.append("g").attr("class", "box_" + i);
 
       // draw the box representing the IQR
-      vis.append("rect")
-         .attr("x", box_x_l)
+      box.append("rect")
+         .attr("class", "iqr_" + i)
+         .attr("x", box_x_l(i))
          .attr("y", h - y(quartiles[2]))
          .attr("width", box_width)
          .attr("height", y(quartiles[2] - quartiles[0]));
 
       // draw the median
-      vis.append("line")
-          .attr("class", "median_" + i)
-          .attr("x1", box_x_l)
-          .attr("x2", box_x_r)
-          .attr("y1", h - y(quartiles[1]))
-          .attr("y2", h-y(quartiles[1]));
+      box.append("line")
+         .attr("class", "median_" + i)
+         .attr("x1", box_x_l(i))
+         .attr("x2", box_x_r(i))
+         .attr("y1", h - y(quartiles[1]))
+         .attr("y2", h-y(quartiles[1]));
 
       // draw the whiskers
       // NB: quartiles[i*2] is a little bit of trickery
       //     to get q1 for the lower whisker and q3 for the upper whisker
-      vis.selectAll(".whiskers_" + i + " line")
+      box.selectAll(".whiskers_" + i + " line")
          .data(whisker_indices)
          .enter()
          .append("line")
          .attr("class", "whiskers_" + i)
-         .attr("x1", box_x_m)
-         .attr("x2", box_x_m)
+         .attr("x1", box_x_m(i))
+         .attr("x2", box_x_m(i))
          .attr("y1", function(d, i) { return h - y(quartiles[i * 2]); })
          .attr("y2", function(d) { return h - y(times[d]); });
 
       // TODO(hammer): fix the hover text by adding a class per box
       // draw the outliers
-      vis.selectAll("circle")
+      box.selectAll(".outliers_" + i + " circle")
          .data(times.filter(function(d, i) {
            return i < boxWhiskers(times)[0] || i > boxWhiskers(times)[1];
          }))
          .enter()
          .append("circle")
-         .attr("cx", box_x_m)
+         .attr("class", "outliers_" + i)
+         .attr("cx", box_x_m(i))
          .attr("cy", function(d) { return h - y(d); })
          .attr("r", 2)
-         .on("mouseover", function(d, i) {
-           d3.select("div#box g")
+         .on("mouseover", function(d) {
+           d3.select("div#box g.boxplot_content")
              .append("text")
              .attr("id", "tip")
-             .attr("x", box_x_m + 5)
+             .attr("x", this.cx.baseVal.value + 5)
              .attr("y", h - y(d))
              .attr("text-anchor", "start")
              .attr("font-size", "8")
              .text(d3.format(",")(d));
-           d3.select(this).attr("fill", "red")
+           d3.select(this).attr("fill", "red");
          })
-         .on("mouseout", function(d, i) {
-           d3.select("div#box g #tip").remove();
-           d3.select(this).attr("fill", "black")
+         .on("mouseout", function() {
+           d3.select("div#box g.boxplot_content #tip").remove();
+           d3.select(this).attr("fill", "black");
          });
     }
   });
