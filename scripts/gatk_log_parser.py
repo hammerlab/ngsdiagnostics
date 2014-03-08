@@ -180,9 +180,9 @@ def main(args):
             sample = "Test"
             db = sqlite3.connect(db_fn)
             for key in list(t.keys()):
-                if t[key]  != 0:
+                if t[key] != 0:
                     logging.info('%s\t%s\t%d' % (sample, key.replace(' ', '_'), t[key]))
-                    #insert_run_phase_time(db, run_id, key.replace(' ', '_'), t[key])
+                    insert_run_phase_time(db, run_id, key.replace(' ', '_'), t[key])
             db.close()
             sampleCount += 1
     except StepException as e:
