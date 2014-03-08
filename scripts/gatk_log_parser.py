@@ -13,8 +13,6 @@ import sys
 import report_metadata
 from collections import defaultdict
 
-logging.basicConfig(level=logging.INFO)
-
 # Each line in the log file is scanned for one of these strings --
 # these define the "steps" under which the time elapsed is aggregated.
 steps = ['bwa mem', 'SortSam', 'RealignerTargetCreator', 'IndelRealigner',
