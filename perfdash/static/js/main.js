@@ -42,15 +42,23 @@ function fetchDataAndCreateBoxPlot() {
     /******************
      * Data preparation
      ******************/
-    // TODO(hammer): sort by median in descending order
-    var stepTimes = {};
+    var stepInfo = [];
     data.filter(function(x) { return x.step != "sample name"; }).forEach(function(d) {
-      stepTimes[d["step"]] = d3.values(d).map(parseFloat)
-                                         .filter(function(x) { return !isNaN(x); })
-                                         .sort(d3.ascending);
+      var stepTimes = d3.values(d).map(parseFloat)
+                                  .filter(function(x) { return !isNaN(x); })
+                                  .sort(d3.ascending);
+      stepInfo.push({
+        "stepName": d["step"],
+        "stepTimes": stepTimes,
+        "stepQuartiles": boxQuartiles(stepTimes),
+        "stepWhiskers": boxWhiskers(stepTimes)
+      });
     });
-    var stepEntries = d3.entries(stepTimes);
-    var maxTime = d3.max([].concat.apply([], d3.values(stepTimes)));
+    // sort by median
+    stepInfo.sort(function(x, y) {
+      return d3.descending(x.stepQuartiles[1], y.stepQuartiles[1]);
+    });
+    var maxTime = d3.max(stepInfo.map(function(x) { return d3.max(x.stepTimes); }));
 
     /*****
      * SVG
@@ -59,10 +67,11 @@ function fetchDataAndCreateBoxPlot() {
     var p_b = 50;
     var p_l = 50;
     var p_r = 50;
+
     var p_box_l = 25;
     var p_box_r = 25;
     var box_width = 20;
-    var num_boxes = d3.entries(stepTimes).length;
+    var num_boxes = stepInfo.length;
 
     var box_x_l = function(i) {
       return p_l + (i + 1) * (p_box_l + box_width + p_box_r) - p_box_r;
@@ -84,13 +93,14 @@ function fetchDataAndCreateBoxPlot() {
     /********
      * Y Rule
      ********/
-    // TODO(hammer): use a time scale
-    var y = d3.scale.linear()
-                    .domain([0, maxTime])
-                    .range([0, h]);
+    var y = d3.time.scale()
+                   .domain([secondsToRefDate(0), secondsToRefDate(maxTime)])
+                   .range([0, h]);
+
+    var ny = function(secs) { return y(secondsToRefDate(secs)) };
 
     var yrule = vis.selectAll("g.y")
-                   .data(y.ticks(5))
+                   .data(y.ticks(d3.time.hour, 1))
                    .enter()
                    .append("g")
                    .attr("class", "y");
@@ -106,13 +116,16 @@ function fetchDataAndCreateBoxPlot() {
          .attr("y", function(d) { return h - y(d); })
          .attr("dy", "0.5ex")
          .attr("text-anchor", "end")
-         .text(y.tickFormat(5, "s"));
+         .text(function(d) {
+           return d3.format("02")(d.getHours()) + ":" +
+                  d3.format("02")(d.getMinutes());
+         });
 
     /********
      * X Axis
      ********/
     var xrule = vis.selectAll("g.x")
-                   .data(d3.keys(stepTimes))
+                   .data(stepInfo.map(function(x) { return x.stepName; }))
                    .enter()
                    .append("g")
                    .attr("class", "x");
@@ -134,10 +147,10 @@ function fetchDataAndCreateBoxPlot() {
      * Box Plot
      **********/
     for (var i = 0; i < num_boxes; i++) {
-      var stepName = stepEntries[i].key;
-      var times = stepEntries[i].value;
-      var quartiles = boxQuartiles(times);
-      var whisker_indices = boxWhiskers(times);
+      var stepName = stepInfo[i].stepName;
+      var times = stepInfo[i].stepTimes;
+      var quartiles = stepInfo[i].stepQuartiles;
+      var whisker_indices = stepInfo[i].stepWhiskers;
 
       var box = vis.append("g").attr("class", "box_" + i);
 
@@ -145,17 +158,17 @@ function fetchDataAndCreateBoxPlot() {
       box.append("rect")
          .attr("class", "iqr_" + i)
          .attr("x", box_x_l(i))
-         .attr("y", h - y(quartiles[2]))
+         .attr("y", h - ny(quartiles[2]))
          .attr("width", box_width)
-         .attr("height", y(quartiles[2] - quartiles[0]));
+         .attr("height", ny(quartiles[2] - quartiles[0]));
 
       // draw the median
       box.append("line")
          .attr("class", "median_" + i)
          .attr("x1", box_x_l(i))
          .attr("x2", box_x_r(i))
-         .attr("y1", h - y(quartiles[1]))
-         .attr("y2", h-y(quartiles[1]));
+         .attr("y1", h - ny(quartiles[1]))
+         .attr("y2", h - ny(quartiles[1]));
 
       // draw the whiskers
       // NB: quartiles[i*2] is a little bit of trickery
@@ -167,8 +180,8 @@ function fetchDataAndCreateBoxPlot() {
          .attr("class", "whiskers_" + i)
          .attr("x1", box_x_m(i))
          .attr("x2", box_x_m(i))
-         .attr("y1", function(d, i) { return h - y(quartiles[i * 2]); })
-         .attr("y2", function(d) { return h - y(times[d]); });
+         .attr("y1", function(d, i) { return h - ny(quartiles[i * 2]); })
+         .attr("y2", function(d) { return h - ny(times[d]); });
 
       // draw the outliers
       box.selectAll(".outliers_" + i + " circle")
@@ -179,17 +192,17 @@ function fetchDataAndCreateBoxPlot() {
          .append("circle")
          .attr("class", "outliers_" + i)
          .attr("cx", box_x_m(i))
-         .attr("cy", function(d) { return h - y(d); })
+         .attr("cy", function(d) { return h - ny(d); })
          .attr("r", 2)
          .on("mouseover", function(d) {
            d3.select("div#box g.boxplot_content")
              .append("text")
              .attr("id", "tip")
              .attr("x", this.cx.baseVal.value + 5)
-             .attr("y", h - y(d))
+             .attr("y", h - ny(d))
              .attr("text-anchor", "start")
              .attr("font-size", "8")
-             .text(d3.format(",")(d));
+             .text(d3.time.format("%H:%M")(secondsToRefDate(d)));
            d3.select(this).attr("fill", "red");
          })
          .on("mouseout", function() {
