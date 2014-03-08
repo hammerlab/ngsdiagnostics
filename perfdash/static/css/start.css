@@ -1,0 +1,16 @@
+.header {
+   font-family: 'Indie Flower', cursive;
+   font-size: 50px;
+}
+.searchbox {
+   border-style: solid;
+   border-radius: 5px;
+   border-width: 2px;
+   border-color: lightgray;
+
+}
+
+.searchbox:hover {
+   border-color: lightblue;
+}
+

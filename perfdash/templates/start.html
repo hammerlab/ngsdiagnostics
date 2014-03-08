@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NGSDiagnostics Dashboard</title>
+    <link rel="stylesheet" href="static/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="static/css/jquery-ui-1.10.4.custom.css"/>
+    <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Indie+Flower' type='text/css'/>
+    <link rel='stylesheet' href="static/css/start.css" type='text/css'/>
+    <script>
+     var paths = [];
+     {% for logfile in logfiles %}
+     var pathcomponents = "{{ logfile }}".split("/");
+     paths.push({
+       value: "{{ logfile }}",
+       label: [pathcomponents[5], pathcomponents[7], pathcomponents[8]].join(",")
+       });
+     {% endfor %}
+    </script>
+  </head>
+
+  <body onLoad="initialize(paths);">
+    <br><br><br>
+    <div class="row">
+      <div class="col-md-12 header">
+	<center>
+	  NGS Diagnostics<br><br>
+	</center>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+	<center>
+	  <input class="searchbox" id="searchbox" type=text size=100/>
+	  <input type="hidden" id="logfile-id">
+	  <p id="logfile-description"></p>
+	</center>
+      </div>
+    </div>
+    <script src="static/js/jquery-1.10.1.min.js"></script>
+    <script src="static/js/jquery-ui-1.10.4.custom.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script src="static/js/start.js"></script>
+  </body>
+</html>

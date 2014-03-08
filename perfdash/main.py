@@ -1,18 +1,32 @@
-from flask import request, g, render_template
+from flask import request, g, render_template, Flask
 
-import json
-import sqlite3
-import os
 import datetime
+import json
+import os
+import sqlite3
 
 from perfdash import app
 
+pathnames = []
 
 def connect_db():
     """Connects to the specific database."""
     rv = sqlite3.connect(app.config['PERF_DB_FILE'])
     rv.row_factory = sqlite3.Row
     return rv
+
+def init_logfile_index():
+    db = connect_db()
+    query = """\
+SELECT pathname, run_timestamp
+FROM   log_file_paths
+"""
+    rows = db.execute(query).fetchall()
+    for one_row in rows:
+        pathnames.append(one_row[0])
+    db.close()
+
+init_logfile_index()
 
 @app.before_request
 def before_request():
@@ -31,6 +45,13 @@ def get_db():
     if not hasattr(g, 'sqlite_db'):
         g.sqlite_db = connect_db()
     return g.sqlite_db
+
+# This will probably be the main entry point once this is all done
+# but since this page not close to finish, I'm not going to make
+# it the root path
+@app.route('/start')
+def start():
+    return render_template('start.html', logfiles=pathnames)
 
 @app.route('/perfdash/data')
 def data():
