@@ -4,13 +4,19 @@
 # Copyright (c) 2014. Mount Sinai School of Medicine
 #
 
-import datetime
+from datetime.datetime import strptime
 import re
 import sqlite3
 import sys
-import utils
 
 from optparse import OptionParser
+
+# Copied from stack overflow
+def unix_time(dt):
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    td = dt - epoch
+    since_last =  (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+    return since_last
 
 def main(argv):
     parser = OptionParser(
@@ -19,6 +25,7 @@ one per line> <sqlite db>""")
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.error("Wrong number of arguments")
+
     logfiles_list_filename = args[0]
     sqlitedb_filename = args[1]
 
@@ -29,17 +36,16 @@ one per line> <sqlite db>""")
         components = one_logfile.strip().split(" ")
         timestamp = components[5] + " " + re.sub("\.[0-9]+","", components[6])
         pathname = components[8]
-        logfile_date = datetime.datetime.strptime(timestamp, 
-                                                  "%Y-%m-%d %H:%M:%S")
-        
+        logfile_date = strptime(timestamp, "%Y-%m-%d %H:%M:%S")
         try:
             c.execute("""\
             INSERT INTO log_file_paths (pathname, run_timestamp)
             VALUES                     (?, ?)""",
-                      (pathname, utils.unix_time(logfile_date)))
+                      (pathname, unix_time(logfile_date)))
             db.commit()
         except sqlite3.IntegrityError as err:
             print("Logfile already existed.")
     db.close()
-if __name__=='__main__': 
-	main(sys.argv)
+
+if __name__=='__main__':
+    main(sys.argv)
