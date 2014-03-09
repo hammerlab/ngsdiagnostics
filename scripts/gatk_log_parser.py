@@ -6,6 +6,7 @@
 # Add per sample output (sample name, size of data, read counts)
 # define schema (sample, sample stats, ...) in SQLite3 for tracking
 
+import argparse
 import logging
 import re
 import sqlite3
@@ -150,42 +151,62 @@ def parse_file(filename):
     return total_times
 
 
-def insert_run_phase_time(db, run_id, key, timing):
-    c = db.cursor()
-    key = key.lower()
-    cursor = c.execute("SELECT id FROM perf_steps WHERE name=?", (key,))
-    step_id_cursor = cursor.fetchone()
-    if not step_id_cursor:
-        c.execute("INSERT INTO perf_steps (name) VALUES (?)", (key,))
-        cursor = c.execute("SELECT id FROM perf_steps WHERE name = ?", (key,))
-        step_id = cursor.fetchone()[0]
+# TODO(hammer): generalize to handle sqlite3 and psycopg2
+def get_conn(db):
+    return sqlite3.connect(db)
+
+
+def get_step_id(conn, step_name):
+    # For a known step_name, look up its step_id
+    # For a new step_name, create a new step_id
+    c = conn.cursor()
+    step_name = step_name.lower()
+    result = c.execute("SELECT id FROM perf_steps WHERE name=?", (step_name,))
+    known_step_id = result.fetchone()
+    if known_step_id:
+        step_id = known_step_id[0]
     else:
-        step_id = step_id_cursor[0]
+        # NB: some databases will make us commit() this INSERT
+        result = c.execute("INSERT INTO perf_steps (name) VALUES (?)", (step_name,))
+        step_id = result.lastrowid
+    return step_id
+
+
+def insert_step_time(conn, run_id, step_name, step_time):
+    step_id = get_step_id(conn, step_name)
+    c = conn.cursor()
     c.execute("INSERT INTO perf_measurements (stepid, run_id, step_time) VALUES (?, ?, ?)",
-              (step_id, run_id, timing))
-    db.commit()
+              (step_id, run_id, step_time))
+    conn.commit()
 
-# Pass the filenames of the logfiles you want to parse in on the command line.
-# TODO(hammer): use optparse
-# TODO(hammer): add some tests
-def main(args):
-    db_fn = args[-1]
-    try:
-        sampleCount = 0
-        for arg in args[:-1]:
-            run_id = report_metadata.report_metadata_to_db(arg, db_fn)
-            t = parse_file(arg)
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='Process GATK log files.')
+    parser.add_argument('--logfiles', nargs='+', help='one or more GATK log files')
+    parser.add_argument('--db', nargs='?', help='sqlite database')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+
+    if args.verbose: logging.basicConfig(level=logging.DEBUG)
+    persist_to_db = True if args.db else False
+
+    for logfile in args.logfiles:
+        try:
+            run_info = parse_file(logfile)
             sample = "Test"
-            db = sqlite3.connect(db_fn)
-            for key in list(t.keys()):
-                if t[key] != 0:
-                    logging.info('%s\t%s\t%d' % (sample, key.replace(' ', '_'), t[key]))
-                    insert_run_phase_time(db, run_id, key.replace(' ', '_'), t[key])
-            db.close()
-            sampleCount += 1
-    except StepException as e:
-        logging.error(e.found)
-        logging.error(e.line)
+            nonzero_steps = [(step_name.replace(' ', '_'), step_time)
+                             for step_name, step_time in run_info.items()
+                             if step_time > 0]
+            for step_name, step_time in nonzero_steps:
+                logging.info('\t'.join([sample, step_name, str(step_time)]))
+                if persist_to_db:
+                    conn = get_conn(args.db)
+                    run_id = report_metadata.report_metadata_to_db(conn, logfile)
+                    insert_step_time(conn, run_id, step_name, step_time)
+        except StepException as e:
+            logging.error(e.found)
+            logging.error(e.line)
 
-if __name__=="__main__":
-    main(sys.argv[1:])
+
+if __name__ == '__main__':
+    main(sys.argv)

@@ -19,7 +19,7 @@ def unix_time(dt):
     since_last =  (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
     return since_last
 
-def report_metadata_to_db(logfile, sqlitedb_filename):
+def report_metadata_to_db(conn, logfile):
     inf = open(logfile, 'r')
     run_time_pattern = re.compile("Date/Time: (\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2})")
     run_args_pattern = re.compile("Program Args: (.*)$")
@@ -41,23 +41,22 @@ def report_metadata_to_db(logfile, sqlitedb_filename):
         if run_date and run_args and sample:
             logging.info("Timestamp for this run: " + run_date)
             logging.info("Sample for this run: " + sample)
-            row_id = create_run_metadata(run_date, run_args, sample, sqlitedb_filename)
+            row_id = create_run_metadata(conn, run_date, run_args, sample)
             break
     inf.close()
     return row_id
 
-def create_run_metadata(run_date, run_args, sample, sqlitedb_filename):
+def create_run_metadata(conn, run_date, run_args, sample):
     seconds_since_epoch = unix_time(
         datetime.datetime.strptime(run_date, '%Y/%m/%d %H:%M:%S'))
-
-    db = sqlite3.connect(sqlitedb_filename)
-    c = db.cursor()
+    c = conn.cursor()
 
     try:
         c.execute("""\
         INSERT INTO run_timing_metadata (run_timestamp, run_args, sample)
         VALUES      (?, ?, ?)""",
         (seconds_since_epoch, run_args, sample))
+        conn.commit()
     except sqlite3.IntegrityError as err:
         logging.info("Run metadata (args, timestamp, sample) already existed.")
 
@@ -66,8 +65,6 @@ def create_run_metadata(run_date, run_args, sample, sqlitedb_filename):
     WHERE  run_timestamp = ? and run_args = ? and sample = ?
     """, (seconds_since_epoch, run_args, sample))
     row_id = result.fetchone()[0]
-    db.commit()
-    db.close()
     return row_id
 
 def main(argv):
