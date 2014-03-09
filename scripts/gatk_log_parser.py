@@ -28,30 +28,8 @@ steps = ['bwa mem', 'SortSam', 'RealignerTargetCreator', 'IndelRealigner',
 # different functionedge lines across the logfile and determine
 # the start/end time of each subtask.
 patt = re.compile('INFO\\s+(\\d{2}):(\\d{2}):(\\d{2}),(\\d+) FunctionEdge\\s+-\\s+([^:]+):\\s+(.*)')
-
 day_seconds = 24 * 60 * 60
 
-# I need to build a map from 'filename' to 'sample identifier' (e.g. "NA12878"),
-# so I load it from a two-column file.
-def load_sample_keys(filename='1kgenomes_jobs.txt'):
-    inf = open(filename, 'r')
-    # assume the first line is a header.
-    lines = [tuple(x.rstrip('\n').split('\t')) for x in inf.readlines()[1:]]
-    inf.close()
-    return dict([(job + '-logshort.txt', sample) for (job, sample) in lines])
-
-class StepException(Exception):
-    def __init__(self, found, line):
-        self.found = found
-        self.line = line
-    def __repr__(self):
-        return 'StepError(%s in %s)' % (self.found, self.line)
-
-def find_steps(string):
-    found = [step for step in steps if string.find(step) >= 0]
-    if len(found) == 1: return found[0]
-    if len(found) > 1: raise StepException(found, string)
-    return None
 
 class LogTime:
     def __init__(self, hrs, mins, secs, prev_logtime):
@@ -78,9 +56,33 @@ class LogTime:
     def __repr__(self):
         return '%02d:%02d:%02d %d' % (self.hrs, self.mins, self.secs, self.timestamp)
 
-# to be clear, this parses a log file
-def parse_file(filename):
+
+class StepException(Exception):
+    def __init__(self, found, line):
+        self.found = found
+        self.line = line
+    def __repr__(self):
+        return 'StepError(%s in %s)' % (self.found, self.line)
+
+
+# I need to build a map from 'filename' to 'sample identifier' (e.g. "NA12878"),
+# so I load it from a two-column file.
+def load_sample_keys(filename='1kgenomes_jobs.txt'):
     inf = open(filename, 'r')
+    # assume the first line is a header.
+    lines = [tuple(x.rstrip('\n').split('\t')) for x in inf.readlines()[1:]]
+    inf.close()
+    return dict([(job + '-logshort.txt', sample) for (job, sample) in lines])
+
+
+def find_steps(string):
+    found = [step for step in steps if string.find(step) >= 0]
+    if len(found) == 1: return found[0]
+    if len(found) > 1: raise StepException(found, string)
+    return None
+
+
+def parse_gatk_logfile(filename):
     lineCount = 0
     prev_logtime = None
     logtimes = []
@@ -105,6 +107,7 @@ def parse_file(filename):
     for step in steps: total_times[step] = 0.0
     total_calls = defaultdict(int)
 
+    inf = open(filename, 'r')
     try:
         for line in [x.rstrip('\n') for x in inf.readlines()]:
             m = patt.match(line)
@@ -192,7 +195,7 @@ def main(argv):
 
     for logfile in args.logfiles:
         try:
-            run_info = parse_file(logfile)
+            run_info = parse_gatk_logfile(logfile)
             sample = "Test"
             nonzero_steps = [(step_name.replace(' ', '_'), step_time)
                              for step_name, step_time in run_info.items()
