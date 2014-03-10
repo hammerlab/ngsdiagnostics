@@ -20,3 +20,11 @@ INFO  14:34:51,180 FunctionEdge - Starting:  'bash'  '-c'  "  'set'  '-o' 'pipef
   groups = gatk_log_parser.patt.match(sample_log_line).groups()
   assert groups[:-1] == expected_groups[:-1]
   assert gatk_log_parser.find_steps(groups[-1]) == expected_step
+
+
+def test_log_time():
+    logtime = gatk_log_parser.LogTime(10, 10, 10, None)
+    assert logtime.hrs == 10
+    assert logtime.mins == 10
+    assert logtime.secs == 10
+    assert logtime.diff > 0
