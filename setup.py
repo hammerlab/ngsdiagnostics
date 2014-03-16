@@ -11,7 +11,7 @@ setup(
     long_description=__doc__,
     packages=['perfdash'],
     scripts=['scripts/run_perfdash.py',
-             'scripts/gatk_log_parser.py'],
+             'scripts/gatk_queue_log_parser.py'],
     data_files=[('data', ['data/perf-runs.db'])],
     include_package_data=True,
     zip_safe=False,
