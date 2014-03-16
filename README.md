@@ -3,7 +3,7 @@ ngsdiagnostics
 
 Diagnostic Scripts for an NGS Pipeline
 
-To run:
+To run inside of a venv (preferred):
 ```
 $ curl -O 'https://gist.github.com/vsajip/4673395/raw/3420d9150ce1e9797dc8522fce7386d8643b02a1/pyvenvex.py'
 $ python3 pyvenvex.py venv-ngsdiagnostics
