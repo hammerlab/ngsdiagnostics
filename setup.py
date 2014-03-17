@@ -1,4 +1,9 @@
 from setuptools import setup
+import sys
+
+if sys.version_info < (3, 3):
+    print('Please upgrade to Python 3.3 or above.')
+    sys.exit(1)
 
 setup(
     name='ngsdiagnostics',
@@ -6,8 +11,7 @@ setup(
     long_description=__doc__,
     packages=['perfdash'],
     scripts=['scripts/run_perfdash.py',
-             'scripts/report_metadata.py',
-             'scripts/gatk_log_parser.py'],
+             'scripts/gatk_queue_log_parser.py'],
     data_files=[('data', ['data/perf-runs.db'])],
     include_package_data=True,
     zip_safe=False,
