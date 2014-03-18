@@ -10,12 +10,15 @@ from collections import defaultdict
 
 # NB: Whitespace-separated tokens are quoted in ISMMS logs, so 'bwa mem' won't work
 # NB: bwa mem output is piped to SortSam in the ISMMS pipeline
-STEPS = ['bwa mem', 'SortSam', 'RealignerTargetCreator', 'IndelRealigner',
-         'MergeSamFiles', 'MarkDuplicates', 'BaseRecalibrator', 'PrintReads',
-         'CalculateHsMetrics', 'CollectGcBiasMetrics', 'CollectMultipleMetrics',
-         'ReduceReads', 'ContEst', 'UnifiedGenotyper', 'HaplotypeCaller',
-         'VariantAnnotator', 'AnnotateCosegregation', 'AnnotateLikelyPathogenic',
-         'VariantEval', 'org.broadinstitute.sting.tools.CatVariants']
+BWA_STEPS = ['bwa mem']
+GATK_STEPS = ['RealignerTargetCreator', 'IndelRealigner', 'BaseRecalibrator',
+              'PrintReads', 'ReduceReads', 'UnifiedGenotyper', 'HaplotypeCaller']
+PICARD_STEPS = ['SortSam', 'MergeSamFiles', 'MarkDuplicates', 'CalculateHsMetrics',
+                'CollectGcBiasMetrics', 'CollectMultipleMetrics']
+OTHER_STEPS = ['ContEst', 'VariantAnnotator', 'AnnotateCosegregation',
+               'AnnotateLikelyPathogenic', 'VariantEval',
+               'org.broadinstitute.sting.tools.CatVariants']
+ALL_STEPS = BWA_STEPS + GATK_STEPS + PICARD_STEPS + OTHER_STEPS
 
 
 #
@@ -62,7 +65,8 @@ def handle_function_edge_line(match, run_info):
 
     if edge_type in ('Starting', 'Done'):
         body_hash = hashlib.md5(body.encode()).hexdigest()
-        run_info['steps'][step].append((body_hash, edge_type, line_dt, body))
+        # TODO(hammer): move to dict for step instance info?
+        run_info['steps'][step].append([body_hash, edge_type, line_dt, body])
 
 
 def parse_file(filename):
@@ -96,6 +100,33 @@ def get_avg_step_times(run_info):
         logging.info("Step times for step %s: %s" % (step_name, step_times))
         avg_times[step_name] = sum(step_times) / len(step_times)
     return avg_times
+
+
+def make_dict_of_lists(list_of_pairs):
+    d = defaultdict(list)
+    for (key, value) in list_of_pairs: d[key].append(value)
+    return d
+
+
+def parse_gatk_command_line(body):
+    clean_body = [token.strip("'") for token in body.strip().split()]
+    java_index = clean_body.index('java')
+    gatk_index = clean_body.index('org.broadinstitute.sting.gatk.CommandLineGATK')
+    java_args = clean_body[java_index + 1:gatk_index]
+    gatk_args = clean_body[gatk_index + 1:]
+    gatk_args_list_of_pairs = [(param_name.strip('-'), param_value)
+                               for (param_name, param_value)
+                               in zip(gatk_args[::2], gatk_args[1::2])]
+    gatk_args_dict = make_dict_of_lists(gatk_args_list_of_pairs)
+    return java_args, gatk_args_dict
+
+
+def get_gatk_command_line_args(run_info):
+    for step_name, step_info in run_info['steps'].items():
+        if step_name in GATK_STEPS:
+          new_step_info = [info.append(parse_gatk_command_line(info[3]))
+                           for info in step_info]
+          run_info['steps'][step_name] = new_step_info
 
 
 #
