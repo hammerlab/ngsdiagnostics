@@ -62,7 +62,7 @@ def handle_function_edge_line(match, run_info):
 
     if edge_type in ('Starting', 'Done'):
         body_hash = hashlib.md5(body.encode()).hexdigest()
-        run_info['steps'][step].append((body_hash, edge_type, line_dt))
+        run_info['steps'][step].append((body_hash, edge_type, line_dt, body))
 
 
 def parse_file(filename):
