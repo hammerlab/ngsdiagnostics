@@ -18,7 +18,7 @@ PICARD_STEPS = ['SortSam', 'MergeSamFiles', 'MarkDuplicates', 'CalculateHsMetric
 OTHER_STEPS = ['ContEst', 'VariantAnnotator', 'AnnotateCosegregation',
                'AnnotateLikelyPathogenic', 'VariantEval',
                'org.broadinstitute.sting.tools.CatVariants']
-ALL_STEPS = BWA_STEPS + GATK_STEPS + PICARD_STEPS + OTHER_STEPS
+STEPS = BWA_STEPS + GATK_STEPS + PICARD_STEPS + OTHER_STEPS
 
 
 #
@@ -118,14 +118,15 @@ def parse_gatk_command_line(body):
                                for (param_name, param_value)
                                in zip(gatk_args[::2], gatk_args[1::2])]
     gatk_args_dict = make_dict_of_lists(gatk_args_list_of_pairs)
-    return java_args, gatk_args_dict
+    return [java_args, gatk_args_dict]
 
 
+# run_info positional arguments after this function:
+# (0: body_hash, 1: edge_type, 2: line_dt, 3: body, 4: java_args, 5: gatk_args)
 def get_gatk_command_line_args(run_info):
     for step_name, step_info in run_info['steps'].items():
         if step_name in GATK_STEPS:
-          new_step_info = [info.append(parse_gatk_command_line(info[3]))
-                           for info in step_info]
+          new_step_info = [info + parse_gatk_command_line(info[3]) for info in step_info]
           run_info['steps'][step_name] = new_step_info
 
 
@@ -146,12 +147,15 @@ def get_run_id(conn, run_info):
     args = run_info['args']
     sample = run_info['sample']
     try:
-        c.execute("""\
+        result = c.execute("""\
         INSERT INTO run_timing_metadata (run_timestamp, run_args, sample)
         VALUES      (?, ?, ?)""", (timestamp, args, sample))
+        run_id = result.lastrowid
         conn.commit()
+        logging.info('Inserted run id %s into run_timing_metadata: (%s, %s, %s)'
+                     % (run_id, timestamp, args, sample))
     except sqlite3.IntegrityError as err:
-        logging.info("Run metadata (args, timestamp, sample) already existed.")
+        logging.info("Run metadata (args, timestamp, sample) already existed")
 
     result = c.execute("""\
     SELECT rowid from run_timing_metadata
@@ -171,20 +175,42 @@ def get_step_id(conn, step_name):
     if known_step_id:
         step_id = known_step_id[0]
     else:
-        # NB: some databases will make us commit() this INSERT
         result = c.execute("INSERT INTO perf_steps (name) VALUES (?)", (step_name,))
         step_id = result.lastrowid
+        conn.commit()
+        logging.info('Inserted step id %s into perf_steps: (%s)' % (step_id, step_name))
     return step_id
 
 
-def insert_step_time(conn, run_id, step_name, step_time):
+def insert_step_time(conn, run_id, step_name, step_time, run_info):
     step_id = get_step_id(conn, step_name)
+    step_info = run_info['steps'][step_name]
     c = conn.cursor()
-    c.execute("INSERT INTO perf_measurements (stepid, run_id, step_time) VALUES (?, ?, ?)",
-              (step_id, run_id, step_time))
-    conn.commit()
-    logging.info('Inserted new row into perf_measurements: (%s, %s, %s)' %
-                 (step_id, run_id, step_time))
+    # TODO(hammer): match beginning and end times
+    for s in step_info:
+        if s[1] == 'Done': continue
+        if step_name in GATK_STEPS:
+            c.execute("INSERT INTO perf_measurements \
+                       (stepid, run_id, step_time, start_time, input_files, \
+                        output_files, reference_file, step_hash, step_body) \
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      (step_id, run_id, step_time, int(s[2].timestamp()),
+                       ','.join(s[5]['I']), ','.join(s[5]['o']), ','.join(s[5]['R']),
+                       s[0], s[3]))
+            conn.commit()
+            logging.info('Inserted new row into perf_measurements: \
+                          (%s, %s, %s, %s, %s, %s, %s, %s, %s)' %
+                         (step_id, run_id, step_time, int(s[2].timestamp()),
+                          ','.join(s[5]['I']), ','.join(s[5]['o']), ','.join(s[5]['R']),
+                          s[0], s[3]))
+        else:
+            c.execute("INSERT INTO perf_measurements \
+                       (stepid, run_id, step_time) \
+                       VALUES (?, ?, ?)",
+                      (step_id, run_id, step_time))
+            conn.commit()
+            logging.info('Inserted new row into perf_measurements: (%s, %s, %s)' %
+                         (step_id, run_id, step_time))
 
 
 def store_results(db, run_info, avg_step_times):
@@ -192,7 +218,7 @@ def store_results(db, run_info, avg_step_times):
     run_id = get_run_id(conn, run_info)
     for step_name, avg_step_time in avg_step_times.items():
       step_id = get_step_id(conn, step_name)
-      insert_step_time(conn, run_id, step_name, avg_step_time)
+      insert_step_time(conn, run_id, step_name, avg_step_time, run_info)
 
 
 #
@@ -214,6 +240,7 @@ def main(argv):
         logging.info('Run info parsed from %s' % logfile)
 
         # Transform
+        get_gatk_command_line_args(run_info)
         avg_step_times = get_avg_step_times(run_info)
         logging.info('Average step times: %s' % (avg_step_times))
 

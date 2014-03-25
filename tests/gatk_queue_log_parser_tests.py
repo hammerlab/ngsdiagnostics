@@ -67,5 +67,5 @@ SAMPLE_GATK_ARGS_DICT = {
 }
 
 def parse_gatk_command_line_test():
-    assert parse_gatk_command_line(SAMPLE_BQSR_LOG_LINE) == (SAMPLE_JAVA_ARGS, SAMPLE_GATK_ARGS_DICT)
+    assert parse_gatk_command_line(SAMPLE_BQSR_LOG_LINE) == [SAMPLE_JAVA_ARGS, SAMPLE_GATK_ARGS_DICT]
 
