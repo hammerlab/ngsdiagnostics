@@ -90,16 +90,24 @@ def parse_file(filename):
 # Transform
 #
 
-# TODO(hammer): do this in the database (ELT!)
-def get_avg_step_times(run_info):
-    avg_times = {}
+# step_info := [(body_hash, edge_type, line_dt, body)]
+# where edge_type in ("Starting", "Done")
+# pair_steps groups by body_hash and combines the two step entries into one
+def pair_steps(run_info):
     for step_name, step_info in run_info['steps'].items():
+        # Will sort on body_hash first and then edge_type, so "Done" sorts before "Starting"
         ss = sorted(step_info)
         # TODO(hammer): add some error checking to this very cute comprehension
-        step_times = [(x[2] - y[2]).seconds for (x, y) in zip(ss[::2], ss[1::2])]
-        logging.info("Step times for step %s: %s" % (step_name, step_times))
-        avg_times[step_name] = sum(step_times) / len(step_times)
-    return avg_times
+        run_info['steps'][step_name] = [
+            {
+                'body_hash': x[0],
+                'start_time': y[2],
+                'end_time': x[2],
+                'run_time': (x[2] - y[2]).seconds,
+                'body': y[3]
+            }
+            for (x, y) in zip(ss[::2], ss[1::2])
+        ]
 
 
 def make_dict_of_lists(list_of_pairs):
@@ -118,16 +126,25 @@ def parse_gatk_command_line(body):
                                for (param_name, param_value)
                                in zip(gatk_args[::2], gatk_args[1::2])]
     gatk_args_dict = make_dict_of_lists(gatk_args_list_of_pairs)
-    return [java_args, gatk_args_dict]
+    return {'java_args': java_args, 'gatk_args': gatk_args_dict}
 
 
-# run_info positional arguments after this function:
-# (0: body_hash, 1: edge_type, 2: line_dt, 3: body, 4: java_args, 5: gatk_args)
 def get_gatk_command_line_args(run_info):
     for step_name, step_info in run_info['steps'].items():
         if step_name in GATK_STEPS:
-          new_step_info = [info + parse_gatk_command_line(info[3]) for info in step_info]
+          new_step_info = [dict(info, **parse_gatk_command_line(info['body']))
+                           for info in step_info]
           run_info['steps'][step_name] = new_step_info
+
+
+# TODO(hammer): do this in the database (ELT!)
+def get_avg_step_times(run_info):
+    avg_times = {}
+    for step_name, step_info in run_info['steps'].items():
+        step_times = [x['run_time'] for x in step_info]
+        logging.info("Step times for step %s: %s" % (step_name, step_times))
+        avg_times[step_name] = sum(step_times) / len(step_times)
+    return avg_times
 
 
 #
@@ -182,35 +199,42 @@ def get_step_id(conn, step_name):
     return step_id
 
 
-def insert_step_time(conn, run_id, step_name, step_time, run_info):
+def insert_step_time(conn, run_id, step_name, avg_step_time, step_info):
     step_id = get_step_id(conn, step_name)
-    step_info = run_info['steps'][step_name]
+    step_info = step_info[step_name]
     c = conn.cursor()
-    # TODO(hammer): match beginning and end times
+
     for s in step_info:
-        if s[1] == 'Done': continue
         if step_name in GATK_STEPS:
             c.execute("INSERT INTO perf_measurements \
-                       (stepid, run_id, step_time, start_time, input_files, \
-                        output_files, reference_file, step_hash, step_body) \
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                      (step_id, run_id, step_time, int(s[2].timestamp()),
-                       ','.join(s[5]['I']), ','.join(s[5]['o']), ','.join(s[5]['R']),
-                       s[0], s[3]))
+                       (stepid, run_id, \
+                        step_time, start_time, end_time, run_time, \
+                        input_files, output_files, reference_file, \
+                        step_hash, step_body) \
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      (step_id, run_id,
+                       avg_step_time, int(s['start_time'].timestamp()),
+                       int(s['end_time'].timestamp()), s['run_time'],
+                       ','.join(s['gatk_args']['I']), ','.join(s['gatk_args']['o']),
+                       ','.join(s['gatk_args']['R']),
+                       s['body_hash'], s['body']))
             conn.commit()
             logging.info('Inserted new row into perf_measurements: \
-                          (%s, %s, %s, %s, %s, %s, %s, %s, %s)' %
-                         (step_id, run_id, step_time, int(s[2].timestamp()),
-                          ','.join(s[5]['I']), ','.join(s[5]['o']), ','.join(s[5]['R']),
-                          s[0], s[3]))
+                          (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)' %
+                         (step_id, run_id,
+                          avg_step_time, int(s['start_time'].timestamp()),
+                          int(s['end_time'].timestamp()), s['run_time'],
+                          ','.join(s['gatk_args']['I']), ','.join(s['gatk_args']['o']),
+                          ','.join(s['gatk_args']['R']),
+                          s['body_hash'], s['body']))
         else:
             c.execute("INSERT INTO perf_measurements \
                        (stepid, run_id, step_time) \
                        VALUES (?, ?, ?)",
-                      (step_id, run_id, step_time))
+                      (step_id, run_id, avg_step_time))
             conn.commit()
             logging.info('Inserted new row into perf_measurements: (%s, %s, %s)' %
-                         (step_id, run_id, step_time))
+                         (step_id, run_id, avg_step_time))
 
 
 def store_results(db, run_info, avg_step_times):
@@ -218,7 +242,7 @@ def store_results(db, run_info, avg_step_times):
     run_id = get_run_id(conn, run_info)
     for step_name, avg_step_time in avg_step_times.items():
       step_id = get_step_id(conn, step_name)
-      insert_step_time(conn, run_id, step_name, avg_step_time, run_info)
+      insert_step_time(conn, run_id, step_name, avg_step_time, run_info['steps'])
 
 
 #
@@ -240,6 +264,7 @@ def main(argv):
         logging.info('Run info parsed from %s' % logfile)
 
         # Transform
+        pair_steps(run_info)
         get_gatk_command_line_args(run_info)
         avg_step_times = get_avg_step_times(run_info)
         logging.info('Average step times: %s' % (avg_step_times))
